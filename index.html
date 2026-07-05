@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NEON TETRIS 3D</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕹️%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/screens.css">
+<link rel="stylesheet" href="css/touch.css">
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+
+<!-- ======== HUD ======== -->
+<div id="hud" class="hidden">
+
+  <div id="stats" class="panel corners">
+    <div class="score-label">Счёт</div>
+    <div id="score" class="score-value">0</div>
+    <div class="divider"></div>
+    <div class="stat-row">
+      <span class="label">Уровень</span>
+      <span id="level" class="value">1</span>
+    </div>
+    <div class="progress"><div id="level-bar"></div></div>
+    <div class="stat-row">
+      <span class="label">Линии</span>
+      <span id="lines" class="value">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Время</span>
+      <span id="time" class="value">00:00</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Рекорд</span>
+      <span id="best" class="value gold">0</span>
+    </div>
+  </div>
+
+  <div id="iconbar">
+    <button id="btn-sound" class="icon-btn" title="Звук (M)">♪</button>
+    <button id="btn-cam" class="icon-btn" title="Сброс камеры (V)">⌖</button>
+    <button id="btn-spin" class="icon-btn" title="Автовращение (A)">↻</button>
+    <button id="btn-pause" class="icon-btn" title="Пауза (P)">❚❚</button>
+  </div>
+
+  <div id="combo" class="pill">
+    <span id="combo-text">КОМБО ×2</span>
+    <span id="b2b-badge" class="hidden">B2B</span>
+  </div>
+
+  <div id="hints" class="panel">
+    <b>Управление</b>
+    <div class="hint-grid">
+      <span><kbd>←</kbd><kbd>→</kbd></span><span>движение</span>
+      <span><kbd>↓</kbd></span><span>мягкое падение</span>
+      <span><kbd>↑</kbd><kbd>X</kbd></span><span>поворот ⟳ &nbsp;(<kbd>Z</kbd> — ⟲)</span>
+      <span><kbd>Space</kbd></span><span>сброс</span>
+      <span><kbd>C</kbd></span><span>холд</span>
+      <span><kbd>🖱</kbd></span><span>вращение камеры · колесо — зум</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="popups"></div>
+
+<!-- ======== Экраны ======== -->
+<div id="overlay">
+
+  <div id="screen-start" class="screen">
+    <div class="logo">
+      <span class="logo-neon">NEON</span>
+      <span class="logo-tetris">TETRIS</span>
+      <span class="logo-3d">3D</span>
+    </div>
+    <p class="subtitle">Классика в неоновом объёме.<br>Крути сцену мышью прямо во время падения фигур.</p>
+    <div id="start-best" class="chip hidden">🏆 Рекорд: <b>0</b></div>
+    <button id="btn-start" class="btn big">▶&nbsp;&nbsp;Играть</button>
+    <div class="controls-card panel">
+      <div class="hint-grid wide">
+        <span><kbd>←</kbd><kbd>→</kbd></span><span>движение</span>
+        <span><kbd>↑</kbd><kbd>X</kbd> / <kbd>Z</kbd></span><span>повороты</span>
+        <span><kbd>Space</kbd></span><span>мгновенный сброс</span>
+        <span><kbd>↓</kbd></span><span>мягкое падение</span>
+        <span><kbd>C</kbd></span><span>холд</span>
+        <span><kbd>P</kbd></span><span>пауза</span>
+      </div>
+    </div>
+    <p class="tip">Enter — старт &nbsp;·&nbsp; M — звук &nbsp;·&nbsp; A — автовращение сцены</p>
+  </div>
+
+  <div id="screen-pause" class="screen hidden">
+    <h1 class="title small">Пауза</h1>
+    <div class="volume-card panel">
+      <span class="label">Громкость</span>
+      <input id="volume" type="range" min="0" max="100" value="60">
+    </div>
+    <div class="btn-row">
+      <button id="btn-resume" class="btn big">Продолжить</button>
+      <button id="btn-restart-p" class="btn ghost">Заново</button>
+    </div>
+    <p class="tip">P или Esc — продолжить</p>
+  </div>
+
+  <div id="screen-over" class="screen hidden">
+    <h1 class="title small red">Игра окончена</h1>
+    <div id="new-record" class="hidden">🏆 Новый рекорд!</div>
+    <div class="final panel corners">
+      <div class="final-score">
+        <span class="label">Счёт</span>
+        <span id="final-score" class="score-value">0</span>
+      </div>
+      <div class="final-grid">
+        <div><span class="label">Линии</span><span id="final-lines" class="value">0</span></div>
+        <div><span class="label">Уровень</span><span id="final-level" class="value">1</span></div>
+        <div><span class="label">Время</span><span id="final-time" class="value">00:00</span></div>
+        <div><span class="label">Макс. комбо</span><span id="final-combo" class="value">0</span></div>
+        <div><span class="label">Рекорд</span><span id="final-best" class="value gold">0</span></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="btn-restart" class="btn big">↻&nbsp;&nbsp;Ещё раз</button>
+      <button id="btn-menu" class="btn ghost">В меню</button>
+    </div>
+    <p class="tip">R — заново</p>
+  </div>
+
+</div>
+
+<!-- ======== Сенсорное управление ======== -->
+<div id="touch">
+  <div class="t-row">
+    <button class="t-btn" data-act="ccw">⟲</button>
+    <button class="t-btn" data-act="cw">⟳</button>
+    <button class="t-btn" data-act="hold">H</button>
+    <button class="t-btn" data-act="pause">❚❚</button>
+  </div>
+  <div class="t-row">
+    <button class="t-btn" data-act="left">◀</button>
+    <button class="t-btn" data-act="soft">▼</button>
+    <button class="t-btn" data-act="hard">⤓</button>
+    <button class="t-btn" data-act="right">▶</button>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/events.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/game.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
